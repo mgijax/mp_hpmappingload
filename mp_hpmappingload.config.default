@@ -32,7 +32,7 @@ fi
 ###########################################################################
 
 #  Path name of the archive, logs, reports and output directories
-FILEDIR=${DATALOADSOUTPUT}/mp_hpmapping
+FILEDIR=${DATALOADSOUTPUT}/mp_hpmappingload
 ARCHIVEDIR=${FILEDIR}/archive
 LOGDIR=${FILEDIR}/logs
 RPTDIR=${FILEDIR}/reports
