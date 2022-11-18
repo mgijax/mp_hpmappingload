@@ -1,0 +1,105 @@
+#format: sh
+#
+#  mp_hpmappingload.config
+#
+#  This file sets up environment variables that are needed to
+#  created MGI Relationships using a set of mp --> hp mapping files
+#
+###########################################################################
+
+###########################################################################
+#
+#  GENERAL SETTINGS
+#
+###########################################################################
+
+#
+#  If the MGICONFIG environment variable does not have a local override,
+#  use the default "live" settings.
+#
+if [ "${MGICONFIG}" = "" ]
+then
+    MGICONFIG=/usr/local/mgi/live/mgiconfig
+    export MGICONFIG
+fi
+
+. ${MGICONFIG}/master.config.sh
+
+###########################################################################
+#
+#  LOAD SPECIFIC SETTINGS
+#
+###########################################################################
+
+#  Path name of the archive, logs, reports and output directories
+FILEDIR=${DATALOADSOUTPUT}/mp_hpmapping
+ARCHIVEDIR=${FILEDIR}/archive
+LOGDIR=${FILEDIR}/logs
+RPTDIR=${FILEDIR}/reports
+OUTPUTDIR=${FILEDIR}/output
+INPUTDIR=${FILEDIR}/input
+
+export FILEDIR ARCHIVEDIR LOGDIR RPTDIR OUTPUTDIR INPUTDIR
+
+# input/output
+#
+# These files will be copied to INPUTDIR, list of files space separated
+DOWNLOAD_DIR=${DATADOWNLOADS}/raw.githubusercontent.com/mapping-commons/mh_mapping_initiative/master/mappings
+INPUT_FILE_NAMES="mp_hp_eye_impc.sssom.tsv mp_hp_hwt_impc.sssom.tsv mp_hp_mgi_all.sssom.tsv mp_hp_owt_impc.sssom.tsv mp_hp_pat_impc.sssom.tsv mp_hp_xry_impc.sssom.tsv"
+
+export DOWNLOAD_DIR INPUT_FILE_NAMES
+
+PREDICATES_TO_LOAD="skos:broadMatch, skos:closeMatch, skos:exactMatch, skos:narrowMatch, skos:relatedMatch"
+
+export PREDICATES_TO_LOAD
+
+# Intermediate file created from preprocessing
+INPUT_FILE_TOLOAD=${OUTPUTDIR}/mp_hpmapping_toload.txt
+QC_RPT=${RPTDIR}/mp_hpmapping.qc.rpt
+
+export INPUT_FILE_TOLOAD QC_RPT
+
+RELATIONSHIP_BCP=MGI_Relationship.bcp
+PROPERTY_BCP=MGI_Relationship_Property.bcp
+export RELATIONSHIP_BCP PROPERTY_BCP
+
+#  Complete path name of the log files
+LOG_FILE=${LOGDIR}/mp_hpmappingload.log
+LOG_PROC=${LOGDIR}/mp_hpmappingload.proc.log
+LOG_DIAG=${LOGDIR}/mp_hpmappingload.diag.log
+LOG_CUR=${LOGDIR}/mp_hpmappingload.cur.log
+LOG_VAL=${LOGDIR}/mp_hpmappingload.val.log
+
+export LOG_FILE LOG_PROC LOG_DIAG LOG_CUR LOG_VAL LOG_DEBUG
+
+# load reference
+JNUM=J:229957
+
+export JNUM 
+
+#  Send debug messages to the diagnostic log (true or false)
+LOG_DEBUG=false
+
+export JNUM LOG_DEBUG
+
+#  The name of the job stream for the load
+JOBSTREAM=mp_hpmappingload
+
+export JOBSTREAM
+
+###########################################################################
+#
+#  MISCELLANEOUS SETTINGS
+#
+###########################################################################
+
+#  The name of the load for the subject of an email notification
+MAIL_LOADNAME="MP/HPO relationship load"
+
+#  Recipient list for mailing the log files (comma-separated)
+#MAIL_LOG_PROC="mgiadmin"
+
+export MAIL_LOADNAME MAIL_LOG_PROC
+
+INSTALLDIR=${MPHPMAPPINGLOAD}
+export INSTALLDIR
