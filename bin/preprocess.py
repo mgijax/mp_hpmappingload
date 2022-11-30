@@ -67,15 +67,18 @@ fpInputInt = None
 fpLogDiag = None
 fpLogCur = None
 
-errorDisplay = '''
-
-***********
-errMsg: %s
-%s
-'''
+# value for blank predicate and justification
+unspecified = 'unspecified'
 
 downloadDir = os.getenv('DOWNLOAD_DIR')
 predicateIncludeList = str.split(os.getenv('PREDICATES_TO_LOAD'), ', ')
+
+# Lookups
+# {mpID:key, ...}
+mpDict = {}
+
+# {hpID:key, ...}
+hpDict = {}
 
 #
 # Purpose: Initialization  of variable with values from the environment
@@ -87,12 +90,33 @@ predicateIncludeList = str.split(os.getenv('PREDICATES_TO_LOAD'), ', ')
 #
 def initialize():
     global inputFileInt, logDiagFile, logCurFile
+    global mpDict, hpDict
 
     inputFileInt = os.getenv('INPUT_FILE_TOLOAD')
     logDiagFile = os.getenv('LOG_DIAG')
     logCurFile = os.getenv('LOG_CUR')
 
     db.useOneConnection(1)
+
+    # lookup of preferred MP IDs/terms
+    results = db.sql('''select a.accid, a._object_key
+        from acc_accession a, voc_term t
+        where a._mgitype_key = 13
+        and a._logicaldb_key = 34
+        and a.preferred = 1
+        and a._object_key = t._term_key''', 'auto')
+    for r in results:
+        mpDict[r['accid']] = r['_object_key']
+
+    # lookup of preferred HP IDs/terms
+    results = db.sql('''select a.accid, a._object_key
+        from acc_accession a, voc_term t
+        where a._mgitype_key = 13
+        and a._logicaldb_key = 180
+        --and a.preferred = 1
+        and a._object_key = t._term_key''', 'auto')
+    for r in results:
+        hpDict[r['accid']] = r['_object_key']
 
     return 0
 
@@ -161,28 +185,6 @@ def closeFiles():
     return 0
 
 #
-# Purpose: Log a message to the diagnostic log, optionally
-#	write a line to the error file. Write to error Dict
-#	which is used to sort errors and will be written to 
-#	curation log later
-# Returns: 0
-# Assumes: file descriptors exist
-# Effects: Nothing
-# Throws: Nothing
-#
-def logIt(msg, line, isError, typeError):
-    global errorDict
-    logit = errorDisplay % (msg, line)
-    fpLogDiag.write(logit)
-    if not typeError in errorDict:
-        errorDict[typeError] = []
-    errorDict[typeError].append(logit)
-    if isError:
-        fpHTMPError.write(line)
-
-    return 0
-
-#
 # Purpose: parse the set of input files
 # Returns: 0
 # Assumes: 
@@ -223,6 +225,21 @@ def parseInputFiles():
         # number of records skipped because predicate not in list
         badPredCt = 0
 
+        # number of records skipped because MP is blank
+        blankMpCt = 0
+
+        # number of records skipped because HP is blank
+        blankHpCt = 0
+
+        # MP ID is not in the database or is not a preferred ID
+        badMpCt = 0
+
+        # HP  ID is not in the database or is not a preferred ID
+        badHpCt = 0
+
+        # No HP ID in the input record
+        hpNotFoundCt = 0
+
         for line in fpInput.readlines():
             line = str.strip(line) # remove CRT at end of line
             #print('line: %s' % line)
@@ -230,7 +247,7 @@ def parseInputFiles():
                 continue
             elif str.find(line, 'subject_id') != -1:
                 headers = str.split(line, TAB)
-                print('headers: %s' % headers)
+                #print('headers: %s' % headers)
                 continue
             recordCt +=1
 
@@ -242,13 +259,56 @@ def parseInputFiles():
             # mapping justification = mapping_justification       
             mpID = tokens[headers.index('subject_id')]
             hpID = tokens[headers.index('object_id')]
+
+            if mpID == '':
+                fpLogCur.write('MP ID is blank: %s' % (line, CRT))
+                blankMpCt += 1
+                continue
+
+            if hpID == '':
+                fpLogCur.write('HP ID is blank: %s' % (line, CRT))
+                blankHpCt += 1
+                continue
+
+            if mpID not in mpDict:
+                badMpCt += 1
+                fpLogCur.write('Invalid MP ID: %s%s' % (line, CRT))
+                continue
+
+            if hpID not in hpDict:
+                if hpID == 'sssom:NoTermFound':
+                    fpLogCur.write('HP ID sssom:NoTermFound: %s%s' % (line, CRT))
+                    hpNotFoundCt += 1
+                else:
+                    fpLogCur.write('Invalid HP ID: %s%s' % (line, CRT))
+                    badHpCt += 1
+                continue
+
             predicate = tokens[headers.index('predicate_id')]
+            if predicate == '':
+                predicate = unspecified
             if predicate not in predicateIncludeList:
                 badPredCt += 1
                 fpLogCur.write('Non-configured predicate: %s%s' % (line, CRT))
                 continue
+
+            # strip off the prefix if it exists
+            predicate = predicate.split(':')[1]
+            
             mapjust = tokens[headers.index('mapping_justification')]
-            lineToWrite = '%s%s%s%s%s%s%s%si%s%s' % (mpID, TAB, hpID, TAB, predicate, TAB, mapjust, TAB, file, CRT)
+            if mapjust == '':
+                mapjust = unspecified
+
+            # strip off the prefix if it exists
+            mapjust = mapjust.split(':')[1]
+
+            # At this point we know the mp and hp IDs are valid and in the dict
+            # Get the key and write to intermediate file - saves us this step
+            # in the processor scrip
+            mpKey = mpDict[mpID]
+            hpKey = hpDict[hpID]
+
+            lineToWrite = '%s%s%s%s%s%s%s%s%s%s%s%si%s%s' % (mpID, TAB, mpKey, TAB, hpID, TAB, hpKey, TAB, predicate, TAB, mapjust, TAB, file, CRT)
             # skip any duplicates
             if lineToWrite in lineList:
                 #print('Dupe Line: %s' % lineToWrite)
@@ -261,6 +321,12 @@ def parseInputFiles():
         fpInput.close()
         fpLogCur.write('Total Records: %s%s' % (recordCt, CRT))
         fpLogCur.write('Total Dupes: %s%s' % (dupeCt, CRT))
+        fpLogCur.write('Total Records with Blank MP ID: %s%s' % (blankMpCt, CRT))
+        fpLogCur.write('Total Records with Blank HP ID: %s%s' % (blankHpCt, CRT))
+
+        fpLogCur.write('Total Records with Invalid MP ID: %s%s' % (badMpCt, CRT))
+        fpLogCur.write('Total Records with Invalid HP ID: %s%s' % (badHpCt, CRT))
+        fpLogCur.write('Total Records with HP sssom:NoTermFound: %s%s' % (hpNotFoundCt, CRT))
         fpLogCur.write('Total Records with non-configured Predicate: %s%s' % (badPredCt, CRT))
         fpLogCur.write('Total Records written to Intermediate File: %s%s' % (goodCt, CRT))
         # -- end of current file parsing

@@ -49,7 +49,8 @@ INPUT_FILE_NAMES="mp_hp_eye_impc.sssom.tsv mp_hp_hwt_impc.sssom.tsv mp_hp_mgi_al
 
 export DOWNLOAD_DIR INPUT_FILE_NAMES
 
-PREDICATES_TO_LOAD="skos:broadMatch, skos:closeMatch, skos:exactMatch, skos:narrowMatch, skos:relatedMatch"
+# unspecified is what we set predicate to if it is blank
+PREDICATES_TO_LOAD="skos:broadMatch, skos:closeMatch, skos:exactMatch, skos:narrowMatch, skos:relatedMatch, unspecified"
 
 export PREDICATES_TO_LOAD
 
@@ -73,7 +74,7 @@ LOG_VAL=${LOGDIR}/mp_hpmappingload.val.log
 export LOG_FILE LOG_PROC LOG_DIAG LOG_CUR LOG_VAL LOG_DEBUG
 
 # load reference
-JNUM=J:229957
+JNUM=J:331145
 
 export JNUM 
 
