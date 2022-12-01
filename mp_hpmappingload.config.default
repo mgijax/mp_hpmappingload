@@ -73,6 +73,12 @@ LOG_VAL=${LOGDIR}/mp_hpmappingload.val.log
 
 export LOG_FILE LOG_PROC LOG_DIAG LOG_CUR LOG_VAL LOG_DEBUG
 
+# Send debug messages to the diagnostic log (true or false)
+#  And don't execute BCP
+LOG_DEBUG=false
+
+export LOG_DEBUG
+
 # load reference
 JNUM=J:331145
 
@@ -95,10 +101,10 @@ export JOBSTREAM
 ###########################################################################
 
 #  The name of the load for the subject of an email notification
-MAIL_LOADNAME="MP/HPO relationship load"
+MAIL_LOADNAME="MP/HP Mapping load"
 
 #  Recipient list for mailing the log files (comma-separated)
-#MAIL_LOG_PROC="mgiadmin"
+MAIL_LOG_PROC="mgiadmin"
 
 export MAIL_LOADNAME MAIL_LOG_PROC
 
