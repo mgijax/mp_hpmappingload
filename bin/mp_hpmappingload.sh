@@ -16,7 +16,6 @@ LOG=`pwd`/mp_hpmappingload.log
 rm -rf ${LOG}
 
 USAGE='Usage: mp_hpmappingload.sh'
-SCHEMA='mgd'
 
 #
 #  Verify the argument(s) to the shell script.
@@ -98,7 +97,7 @@ cleanDir ${OUTPUTDIR}
 echo "" >> ${LOG_DIAG}
 date >> ${LOG_DIAG}
 echo "Run Preprocessor"  | tee -a ${LOG_DIAG}
-${MPHPMAPPINGLOAD}/bin/preprocess.sh 
+${MPHPMAPPINGLOAD}/bin/preprocess.py 
 STAT=$?
 if [ ${STAT} -eq 1 ]
 then
@@ -106,16 +105,6 @@ then
 
     # run postload cleanup and email logs
     shutDown
-fi
-
-# do we need this?
-if [ ${STAT} -eq 3 ]
-then
-    checkStatus ${STAT} "Fatal QC errors detected. See ${QC_RPT}. mpHpoQC.sh"
-    
-    # run postload cleanup and email logs
-    shutDown
-
 fi
 
 #
@@ -126,7 +115,6 @@ date >> ${LOG_DIAG}
 echo "Run process.py"  | tee -a ${LOG_DIAG}
 ${PYTHON} ${MPHPMAPPINGLOAD}/bin/process.py
 STAT=$?
-STAT=0
 checkStatus ${STAT} "${MPHPMAPPINGLOAD}/bin/process.py"
 
 # run postload cleanup and email logs
