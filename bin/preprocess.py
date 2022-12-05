@@ -232,15 +232,15 @@ def parseInputFiles():
     lineList = []
 
     totalGoodCt = 0 
-    for file in str.split(os.getenv('INPUT_FILE_NAMES')):
-        print('file: %s' % file)
+    for fileName in str.split(os.getenv('INPUT_FILE_NAMES')):
+        print('fileName: %s' % fileName)
 
         # The list of column headers for the current file, columns are ordered differently
         # in different files, but have same text
         headers = []
 
-        fpInput = open('%s/%s' % (downloadDir, file))
-        fpLogCur.write('%sFile: %s%s' % (CRT, file, CRT))
+        fpInput = open('%s/%s' % (downloadDir, fileName))
+        fpLogCur.write('%sFile: %s%s' % (CRT, fileName, CRT))
 
         # number of actual records in this file, including dupes
         recordCt = 0
@@ -363,7 +363,7 @@ def parseInputFiles():
             else:
                 hpKey = hpNpDict[hpID]
 
-            lineToWrite = '%s%s%s%s%s%s%s%s%s%s%s%si%s%s' % (mpID, TAB, mpKey, TAB, hpID, TAB, hpKey, TAB, predicate, TAB, mapjust, TAB, file, CRT)
+            lineToWrite = '%s%s%s%s%s%s%s%s%s%s%s%s%s%s' % (mpID, TAB, mpKey, TAB, hpID, TAB, hpKey, TAB, predicate, TAB, mapjust, TAB, fileName, CRT)
             # skip any duplicates
             if lineToWrite in lineList:
                 #print('Dupe Line: %s' % lineToWrite)
