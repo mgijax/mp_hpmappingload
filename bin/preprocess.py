@@ -21,10 +21,12 @@
 #
 #   intermediate file INPUT_FILE_TOLOAD  Format: 
 #   1. MP ID - relationship organizer
-#   2. HP ID - relationship participant
-#   3. Predicate ID - property
-#   4. Mapping Justification - property
-#   5. Input file name - property
+#   2. MP term label
+#   3. HP ID - relationship participant
+#   4. HP term label 
+#   5. Predicate ID - property
+#   6. Mapping Justification - property
+#   7. Input file name - property
 #    
 #  Exit Codes:
 #      0:  Successful completion
@@ -74,14 +76,14 @@ downloadDir = os.getenv('DOWNLOAD_DIR')
 predicateIncludeList = str.split(os.getenv('PREDICATES_TO_LOAD'), ', ')
 
 # Lookups
-# {mpID:key, ...}
+# {mpID:[key, term], ...}
 # preferred
 mpDict = {}
 
 # non-preferred
 mpNpDict = {}
 
-# {hpID:key, ...}
+# {hpID:[key, term], ...}
 # preferred
 hpDict = {}
 
@@ -107,44 +109,44 @@ def initialize():
     db.useOneConnection(1)
 
     # lookup of preferred MP IDs/terms
-    results = db.sql('''select a.accid, a._object_key
+    results = db.sql('''select a.accid, a._object_key, t.term
         from acc_accession a, voc_term t
         where a._mgitype_key = 13
         and a._logicaldb_key = 34
         and a.preferred = 1
         and a._object_key = t._term_key''', 'auto')
     for r in results:
-        mpDict[r['accid']] = r['_object_key']
+        mpDict[r['accid']] = [r['_object_key'], r['term']]
 
     # lookup of non-preferred MP IDs/terms
-    results = db.sql('''select a.accid, a._object_key
+    results = db.sql('''select a.accid, a._object_key, t.term
         from acc_accession a, voc_term t
         where a._mgitype_key = 13
         and a._logicaldb_key = 34
         and a.preferred = 0
         and a._object_key = t._term_key''', 'auto')
     for r in results:
-        mpNpDict[r['accid']] = r['_object_key']
+        mpNpDict[r['accid']] = [r['_object_key'], r['term']]
 
     # lookup of preferred HP IDs/terms
-    results = db.sql('''select a.accid, a._object_key
+    results = db.sql('''select a.accid, a._object_key, t.term
         from acc_accession a, voc_term t
         where a._mgitype_key = 13
         and a._logicaldb_key = 180
         --and a.preferred = 1
         and a._object_key = t._term_key''', 'auto')
     for r in results:
-        hpDict[r['accid']] = r['_object_key']
+        hpDict[r['accid']] = [r['_object_key'], r['term']]
 
     # lookup of non-preferred HP IDs/terms
-    results = db.sql('''select a.accid, a._object_key
+    results = db.sql('''select a.accid, a._object_key, t.term
         from acc_accession a, voc_term t
         where a._mgitype_key = 13
         and a._logicaldb_key = 180
         --and a.preferred = 0
         and a._object_key = t._term_key''', 'auto')
     for r in results:
-        hpNpDict[r['accid']] = r['_object_key']
+        hpNpDict[r['accid']] = [r['_object_key'], r['term']]
 
     return 0
 
@@ -182,9 +184,10 @@ def openFiles():
     #
     try:
         fpLogCur = open(logCurFile, 'a+')
-        fpLogCur.write('\n\n######################################\n')
-        fpLogCur.write('########## Preprocess Log ##############\n')
-        fpLogCur.write('######################################\n\n')
+        fpLogCur.write('\n#############################################\n')
+        fpLogCur.write('############# Preprocess Log ################\n')
+        fpLogCur.write('## Ordered by Line Number within each file ##\n')
+        fpLogCur.write('#############################################\n\n')
 
     except:
         print('Cannot open file: ' + logCurFile)
@@ -265,7 +268,13 @@ def parseInputFiles():
 
         # HP  ID is not in the database 
         badHpCt = 0
-        
+      
+        # Input MP term does not match database term 
+        mpBadTermCt = 0
+
+        # Input HP term does not match database term
+        hpBadTermCt = 0
+
         # MP ID is not a preferred ID
         npMpCt = 0
 
@@ -275,7 +284,10 @@ def parseInputFiles():
         # No HP ID in the input record
         hpNotFoundCt = 0
 
+        # current line number in current file
+        lineNum = 0
         for line in fpInput.readlines():
+            lineNum += 1
             # set to false if a non-preferred ID, which we will report and load.
             mpPreferred = 1
             hpPreferred = 1
@@ -296,40 +308,42 @@ def parseInputFiles():
             # predicate value = predicate_id (load only those in predicateIncludeList)
             # mapping justification = mapping_justification       
             mpID = tokens[headers.index('subject_id')]
+            mpTermLabel =  tokens[headers.index('subject_label')]
             hpID = tokens[headers.index('object_id')]
+            hpTermLabel =  tokens[headers.index('object_label')]
 
             if mpID == '':
-                fpLogCur.write('MP ID is blank: %s' % (line, CRT))
+                fpLogCur.write('Line %s - MP ID is blank: %s' % (lineNum, line, CRT))
                 blankMpCt += 1
                 continue
 
             if hpID == '':
-                fpLogCur.write('HP ID is blank: %s' % (line, CRT))
+                fpLogCur.write('Line %s - HP ID is blank: %s' % (lineNum, line, CRT))
                 blankHpCt += 1
                 continue
 
             if mpID not in mpDict:
                 if mpID not in mpNpDict:
                     badMpCt += 1
-                    fpLogCur.write('Invalid MP ID: %s%s' % (line, CRT))
+                    fpLogCur.write('Line %s - Invalid MP ID: %s%s' % (lineNum, line, CRT))
                     continue
                 else:
                     mpPreferred = 0
-                    fpLogCur.write('Non-preferred MP ID (relationship loaded): %s%s' % (line, CRT))
+                    fpLogCur.write('Line %s - Non-preferred MP ID (relationship loaded): %s%s' % (lineNum, line, CRT))
                     npMpCt +=1                   
 
             if hpID not in hpDict:
                 if hpID == 'sssom:NoTermFound':
-                    fpLogCur.write('HP ID sssom:NoTermFound: %s%s' % (line, CRT))
+                    fpLogCur.write('Line %s - HP ID sssom:NoTermFound: %s%s' % (lineNum, line, CRT))
                     hpNotFoundCt += 1
                     continue
                 elif hpID not in hpNpDict:
-                    fpLogCur.write('Invalid HP ID: %s%s' % (line, CRT))
+                    fpLogCur.write('Line %s - Invalid HP ID: %s%s' % (lineNum, line, CRT))
                     badHpCt += 1
                     continue
                 else:
                     hpPreferred = 0
-                    fpLogCur.write('Non-preferred HP ID (relationship loaded): %s%s' % (line, CRT))       
+                    fpLogCur.write('Line %s - Non-preferred HP ID (relationship loaded): %s%s' % (lineNum, line, CRT))       
                     npHpCt += 1
 
             predicate = tokens[headers.index('predicate_id')]
@@ -337,7 +351,7 @@ def parseInputFiles():
                 predicate = unspecified
             if predicate not in predicateIncludeList:
                 badPredCt += 1
-                fpLogCur.write('Non-configured predicate: %s%s' % (line, CRT))
+                fpLogCur.write('Line %s - Non-configured predicate: %s%s' % (lineNum, line, CRT))
                 continue
 
             # strip off the prefix if it exists
@@ -351,19 +365,31 @@ def parseInputFiles():
             mapjust = mapjust.split(':')[1]
 
             # At this point we know the mp and hp IDs are valid (preferred or not)
-            # Get the key and write to intermediate file - saves us this step
-            # in the processor script
+            # Get the key and term, write to intermediate file - saves us this step
+            # in the processor script. QC the term against the database
             if mpPreferred:
-                mpKey = mpDict[mpID]
+                mpKey = mpDict[mpID][0]
+                mpDbTerm = mpDict[mpID][1]
             else:
-                 mpKey = mpNpDict[mpID]
+                mpKey = mpNpDict[mpID][0]
+                mpDbTerm = mpNpDict[mpID][1]
+
+            if str.lower(mpDbTerm) != str.lower(mpTermLabel):
+                fpLogCur.write('Line %s - Database MP Term: "%s" does not match input term(relationship loaded): %s%s' % (lineNum, mpDbTerm, line, CRT))
+                mpBadTermCt += 1
 
             if hpPreferred:
-                hpKey = hpDict[hpID]
+                hpKey = hpDict[hpID][0]
+                hpDbTerm = hpDict[hpID][1]
             else:
-                hpKey = hpNpDict[hpID]
+                hpKey = hpNpDict[hpID][0]
+                hpDbTerm = hpNpDict[hpID][1]
 
-            lineToWrite = '%s%s%s%s%s%s%s%s%s%s%s%s%s%s' % (mpID, TAB, mpKey, TAB, hpID, TAB, hpKey, TAB, predicate, TAB, mapjust, TAB, fileName, CRT)
+            if str.lower(hpDbTerm) != str.lower(hpTermLabel):
+                fpLogCur.write('Line %s - Database HP Term: "%s" does not match input term(relationship loaded): %s%s' % (lineNum, hpDbTerm, line, CRT))
+                hpBadTermCt += 1
+
+            lineToWrite = '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' % (mpID, TAB, mpTermLabel, TAB, mpKey, TAB, hpID, TAB, hpTermLabel, TAB, hpKey, TAB, predicate, TAB, mapjust, TAB, fileName, CRT)
             # skip any duplicates
             if lineToWrite in lineList:
                 #print('Dupe Line: %s' % lineToWrite)
@@ -383,8 +409,11 @@ def parseInputFiles():
         fpLogCur.write('Total Records with Invalid MP ID: %s%s' % (badMpCt, CRT))
         fpLogCur.write('Total Records with Invalid HP ID: %s%s' % (badHpCt, CRT))
         
-        fpLogCur.write('Total Records with Secondary MP ID: %s%s' % (npMpCt, CRT))
-        fpLogCur.write('Total Records with Secondary HP ID: %s%s' % (npHpCt, CRT))
+        fpLogCur.write('Total Records with Secondary MP ID (relationship loaded): %s%s' % (npMpCt, CRT))
+        fpLogCur.write('Total Records with Secondary HP ID (relationship loaded): %s%s' % (npHpCt, CRT))
+
+        fpLogCur.write('Total Records where input MP label does not match database term (relationship loaded): %s%s' % (mpBadTermCt, CRT))
+        fpLogCur.write('Total Records where input HP label does not match database term (relationship loaded): %s%s' % (hpBadTermCt, CRT))
 
         fpLogCur.write('Total Records with HP sssom:NoTermFound: %s%s' % (hpNotFoundCt, CRT))
         fpLogCur.write('Total Records with non-configured Predicate: %s%s' % (badPredCt, CRT))

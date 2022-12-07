@@ -132,6 +132,15 @@ justSeqNum = 2
 filePropNameKey =  11588492 # data_source
 fileSeqNum = 3
 
+# input file mp term label property
+mpLabelPropNameKey = 109842035 # mp_mapping_label
+mpLabelSeqNum = 4
+
+# input file hp term label property
+hpLabelPropNameKey = 109877779 # hp_mapping_label
+hpLabelSeqNum = 5
+
+
 # database primary keys, will be set to the next available from the db
 nextRelationshipKey = 1000	# MGI_Relationship._Relationship_key
 nextPropertyKey = 1000          # MGI_Relationship_Property._RelationshipProperty_key
@@ -256,12 +265,14 @@ def process( ):
     for line in fpInFile.readlines():
         tokens = list(map(str.strip, str.split(line, TAB)))
         mpId = tokens[0]
-        objKey1 = tokens[1]
-        hpId = tokens[2]
-        objKey2 =  tokens[3]
-        predicate = tokens[4]
-        justification = tokens[5]
-        fileName = tokens[6]
+        mpLabel =  tokens[1]
+        objKey1 = tokens[2]
+        hpId = tokens[3]
+        hpLabel = tokens[4]
+        objKey2 =  tokens[5]
+        predicate = tokens[6]
+        justification = tokens[7]
+        fileName = tokens[8]
         
         # MGI_Relationship
         fpRelationshipFile.write('%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' % \
@@ -279,6 +290,16 @@ def process( ):
 
         # MGI_Relationship_Property predicate filename
         fpPropertyFile.write('%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' % (nextPropertyKey, TAB, nextRelationshipKey, TAB, filePropNameKey, TAB, fileName, TAB, fileSeqNum, TAB, userKey, TAB, userKey, TAB, DATE, TAB, DATE, CRT ) )
+
+        nextPropertyKey += 1
+
+        # MGI_Relationship_Property hp term label
+        fpPropertyFile.write('%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' % (nextPropertyKey, TAB, nextRelationshipKey, TAB, hpLabelPropNameKey, TAB, hpLabel, TAB, hpLabelSeqNum, TAB, userKey, TAB, userKey, TAB, DATE, TAB, DATE, CRT ) )
+
+        nextPropertyKey += 1
+
+        # MGI_Relationship_Property mp term label
+        fpPropertyFile.write('%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' % (nextPropertyKey, TAB, nextRelationshipKey, TAB, mpLabelPropNameKey, TAB, mpLabel, TAB, mpLabelSeqNum, TAB, userKey, TAB, userKey, TAB, DATE, TAB, DATE, CRT ) )
 
         nextPropertyKey += 1
 
