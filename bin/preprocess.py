@@ -374,10 +374,6 @@ def parseInputFiles():
                 mpKey = mpNpDict[mpID][0]
                 mpDbTerm = mpNpDict[mpID][1]
 
-            if str.lower(mpDbTerm) != str.lower(mpTermLabel):
-                fpLogCur.write('Line %s - Database MP Term: "%s" does not match input term(relationship loaded): %s%s' % (lineNum, mpDbTerm, line, CRT))
-                mpBadTermCt += 1
-
             if hpPreferred:
                 hpKey = hpDict[hpID][0]
                 hpDbTerm = hpDict[hpID][1]
@@ -385,18 +381,29 @@ def parseInputFiles():
                 hpKey = hpNpDict[hpID][0]
                 hpDbTerm = hpNpDict[hpID][1]
 
+            # Don't use mpTermLabel or hpTermLabel when looking for dupes, there could be dupes
+            # that have different mp/hp term labels 
+            lineForDupeCheck = '%s%s%s%s%s%s%s%s%s%s%s%s%s%s' % (mpID, TAB, mpKey, TAB, hpID, TAB, hpKey, TAB, predicate, TAB, mapjust, TAB, fileName, CRT)
+
+            lineToWrite = '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' % (mpID, TAB, mpTermLabel, TAB, mpKey, TAB, hpID, TAB, hpTermLabel, TAB, hpKey, TAB, predicate, TAB, mapjust, TAB, fileName, CRT)
+
+            # skip any duplicates
+            if lineForDupeCheck in lineList:
+                #print('Dupe Line: %s -  %s' % (lineNum, lineToWrite))
+                dupeCt +=1
+                fpLogCur.write('Dupe Line: %s - %s' % (lineNum, lineToWrite))
+                continue
+
+            # Now AFTER we check for dupes, report discrepancies between term labels and database terms
+            if str.lower(mpDbTerm) != str.lower(mpTermLabel):
+                fpLogCur.write('Line %s - Database MP Term: "%s" does not match input term(relationship loaded): %s%s' % (lineNum, mpDbTerm, line, CRT))
+                mpBadTermCt += 1
+
             if str.lower(hpDbTerm) != str.lower(hpTermLabel):
                 fpLogCur.write('Line %s - Database HP Term: "%s" does not match input term(relationship loaded): %s%s' % (lineNum, hpDbTerm, line, CRT))
                 hpBadTermCt += 1
 
-            lineToWrite = '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' % (mpID, TAB, mpTermLabel, TAB, mpKey, TAB, hpID, TAB, hpTermLabel, TAB, hpKey, TAB, predicate, TAB, mapjust, TAB, fileName, CRT)
-            # skip any duplicates
-            if lineToWrite in lineList:
-                #print('Dupe Line: %s' % lineToWrite)
-                dupeCt +=1
-                fpLogCur.write('Dupe Line: %s' % lineToWrite)
-                continue
-            lineList.append(lineToWrite)
+            lineList.append(lineForDupeCheck)
             fpInputInt.write(lineToWrite)
             goodCt += 1    
             totalGoodCt += 1
