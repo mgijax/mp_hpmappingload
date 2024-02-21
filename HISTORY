@@ -1,3 +1,8 @@
+TAG: mp_hpmappingload-6-0-23-1
+DATE: 02/21/2024
+STAFF: lec
+added $PYTHON to all shell scripts;removed python invocation from py scripts
+
 TAG: mp_hpmappingload-6-0-22-1
 DATE: 12/14/2022
 STAFF: sc

@@ -97,7 +97,7 @@ cleanDir ${OUTPUTDIR}
 echo "" >> ${LOG_DIAG}
 date >> ${LOG_DIAG}
 echo "Run Preprocessor"  | tee -a ${LOG_DIAG}
-${MPHPMAPPINGLOAD}/bin/preprocess.py 
+${PYTHON} ${MPHPMAPPINGLOAD}/bin/preprocess.py 
 STAT=$?
 if [ ${STAT} -eq 1 ]
 then
